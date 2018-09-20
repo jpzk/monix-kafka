@@ -17,18 +17,18 @@
 package monix.kafka
 
 import java.nio.ByteBuffer
-import org.apache.kafka.common.serialization._
-import org.apache.kafka.common.serialization.{Serializer => KafkaSerializer}
+
+import io.confluent.kafka.serializers.KafkaAvroSerializer
+import org.apache.kafka.common.serialization.{Serializer => KafkaSerializer, _}
 import org.apache.kafka.common.utils.Bytes
+import collection.JavaConverters._
 
 /** Wraps a Kafka `Serializer`, provided for
   * convenience, since it can be implicitly fetched
   * from the context.
   *
-  * @param className is the full package path to the Kafka `Serializer`
-  *
-  * @param classType is the `java.lang.Class` for [[className]]
-  *
+  * @param className   is the full package path to the Kafka `Serializer`
+  * @param classType   is the `java.lang.Class` for [[className]]
   * @param constructor creates an instance of [[classType]].
   *        This is defaulted with a `Serializer.Constructor[A]` function that creates a
   *        new instance using an assumed empty constructor.
@@ -40,8 +40,11 @@ final case class Serializer[A](
   constructor: Serializer.Constructor[A] = (s: Serializer[A]) => s.classType.newInstance()) {
 
   /** Creates a new instance. */
-  def create(): KafkaSerializer[A] =
-    constructor(this)
+  def create(config: KafkaProducerConfig, isKey: Boolean): KafkaSerializer[A] = {
+    val serializer = constructor(this)
+    serializer.configure(config.toMap.asJava, isKey)
+    serializer
+  }
 }
 
 object Serializer {
@@ -91,5 +94,11 @@ object Serializer {
     Serializer[java.lang.Long](
       className = "org.apache.kafka.common.serialization.LongSerializer",
       classType = classOf[LongSerializer]
+    )
+
+  implicit val forKafkaAvroSerializer: Serializer[Object] =
+    Serializer[Object](
+      className = "io.confluent.kafka.serializers.KafkaAvroSerializer",
+      classType = classOf[KafkaAvroSerializer]
     )
 }

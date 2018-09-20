@@ -212,7 +212,7 @@ object KafkaConsumerObservable {
     Task {
       val props = config.toProperties
       blocking {
-        val consumer = new KafkaConsumer[K,V](props, K.create(), V.create())
+        val consumer = new KafkaConsumer[K,V](props, K.create(config, true), V.create(config, false))
         consumer.subscribe(topics.asJava)
         consumer
       }

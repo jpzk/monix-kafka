@@ -196,6 +196,9 @@ import scala.concurrent.duration._
   * @param observableCommitOrder is the `monix.observable.commit.order` setting.
   *        Specifies when the commit should happen, like before we receive the
   *        acknowledgement from downstream, or afterwards.
+  *
+  * @param schemaRegistry is the `schema.registry.url` setting which is used
+  *        by KafkaAvroDeserializer.
   */
 final case class KafkaConsumerConfig(
   bootstrapServers: List[String],
@@ -237,7 +240,8 @@ final case class KafkaConsumerConfig(
   retryBackoffTime: FiniteDuration,
   observableCommitType: ObservableCommitType,
   observableCommitOrder: ObservableCommitOrder,
-  observableSeekToEndOnStart: Boolean) {
+  observableSeekToEndOnStart: Boolean,
+  schemaRegistry: Option[String]) {
 
   def toMap: Map[String,String] = Map(
     "bootstrap.servers" -> bootstrapServers.mkString(","),
@@ -276,7 +280,8 @@ final case class KafkaConsumerConfig(
     "metrics.num.samples" -> metricsNumSamples.toString,
     "metrics.sample.window.ms" -> metricsSampleWindow.toMillis.toString,
     "reconnect.backoff.ms" -> reconnectBackoffTime.toMillis.toString,
-    "retry.backoff.ms" -> retryBackoffTime.toMillis.toString
+    "retry.backoff.ms" -> retryBackoffTime.toMillis.toString,
+    "schema.registry.url" -> schemaRegistry.orNull
   )
 
   def toProperties: Properties = {
@@ -415,7 +420,8 @@ object KafkaConsumerConfig {
       retryBackoffTime = config.getInt("retry.backoff.ms").millis,
       observableCommitType = ObservableCommitType(config.getString("monix.observable.commit.type")),
       observableCommitOrder = ObservableCommitOrder(config.getString("monix.observable.commit.order")),
-      observableSeekToEndOnStart = config.getBoolean("monix.observable.seekEnd.onStart")
+      observableSeekToEndOnStart = config.getBoolean("monix.observable.seekEnd.onStart"),
+      schemaRegistry = getOptString("schema.registry.url")
     )
   }
 }

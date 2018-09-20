@@ -185,6 +185,9 @@ import scala.concurrent.duration._
   * @param monixSinkParallelism is the `monix.producer.sink.parallelism`
   *        setting indicating how many requests the [[KafkaProducerSink]]
   *        can execute in parallel.
+  *
+  * @param schemaRegistry is the `schema.registry.url` setting which is used
+  *        by KafkaAvroSerializer.
   */
 case class KafkaProducerConfig(
   bootstrapServers: List[String],
@@ -222,6 +225,7 @@ case class KafkaProducerConfig(
   metricReporters: List[String],
   metricsNumSamples: Int,
   metricsSampleWindow: FiniteDuration,
+  schemaRegistry: Option[String],
   monixSinkParallelism: Int) {
 
   def toProperties: Properties = {
@@ -265,7 +269,8 @@ case class KafkaProducerConfig(
     "metadata.max.age.ms" -> metadataMaxAge.toMillis.toString,
     "metric.reporters" -> metricReporters.mkString(","),
     "metrics.num.samples" -> metricsNumSamples.toString,
-    "metrics.sample.window.ms" -> metricsSampleWindow.toMillis.toString
+    "metrics.sample.window.ms" -> metricsSampleWindow.toMillis.toString,
+    "schema.registry.url" -> schemaRegistry.orNull
   )
 }
 
@@ -394,6 +399,7 @@ object KafkaProducerConfig {
       metricReporters = config.getString("metric.reporters").trim.split("\\s*,\\s*").toList,
       metricsNumSamples = config.getInt("metrics.num.samples"),
       metricsSampleWindow = config.getInt("metrics.sample.window.ms").millis,
+      schemaRegistry = getOptString("schema.registry.url"),
       monixSinkParallelism = config.getInt("monix.producer.sink.parallelism")
     )
   }

@@ -17,9 +17,11 @@
 package monix.kafka
 
 import java.nio.ByteBuffer
-import org.apache.kafka.common.serialization._
-import org.apache.kafka.common.serialization.{Deserializer => KafkaDeserializer}
+
+import io.confluent.kafka.serializers.KafkaAvroDeserializer
+import org.apache.kafka.common.serialization.{Deserializer => KafkaDeserializer, _}
 import org.apache.kafka.common.utils.Bytes
+import collection.JavaConverters._
 
 /** Wraps a Kafka `Deserializer`, provided for
   * convenience, since it can be implicitly fetched
@@ -40,8 +42,11 @@ final case class Deserializer[A](
   constructor: Deserializer.Constructor[A] = (d: Deserializer[A]) => d.classType.newInstance()) {
 
   /** Creates a new instance. */
-  def create(): KafkaDeserializer[A] =
-    constructor(this)
+  def create(config: KafkaConsumerConfig, isKey: Boolean): KafkaDeserializer[A] = {
+    val deserializer = constructor(this)
+    deserializer.configure(config.toMap.asJava, isKey)
+    deserializer
+  }
 }
 
 object Deserializer {
@@ -91,5 +96,12 @@ object Deserializer {
     Deserializer[java.lang.Long](
       className = "org.apache.kafka.common.serialization.LongDeserializer",
       classType = classOf[LongDeserializer]
+    )
+
+  implicit val forKafkaAvroDeserializer: Deserializer[Object] =
+    Deserializer[Object](
+      className = "io.confluent.kafka.serializers.KafkaAvroDeserializer",
+      classType = classOf[KafkaAvroDeserializer],
+      constructor = s => new KafkaAvroDeserializer(new CachedSchemaRegistryClient("http://schema-registry:8081",10))
     )
 }
